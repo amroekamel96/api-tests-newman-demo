@@ -1,0 +1,40 @@
+name: API tests (Newman)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  api-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Deterministic run against the bundled local mock API. This gates the build.
+      - name: Run API tests (local mock)
+        run: npm run test:all
+
+      # Informational run against the real public API. A public site can be slow
+      # or unreachable, so a failure here does not fail the build.
+      - name: Run API tests (live JSONPlaceholder)
+        continue-on-error: true
+        run: |
+          npm run test:live
+          npm run test:live:data
+
+      - name: Upload HTML reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman-reports
+          path: reports/

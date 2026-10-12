@@ -1,0 +1,560 @@
+{
+  "info": {
+    "name": "JSONPlaceholder API Tests",
+    "description": "Sample API test suite (Postman + Newman) against the public JSONPlaceholder practice API. Covers read, write, negative and data-driven cases with schema validation and a response-time check on every request.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const maxMs = Number(pm.environment.get(\"maxResponseMs\")) || 2000;",
+          "pm.test(`Response time is under ${maxMs} ms`, () => {",
+          "  pm.expect(pm.response.responseTime).to.be.below(maxMs);",
+          "});",
+          "pm.test(\"Content-Type is JSON\", () => {",
+          "  pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+          "});"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Posts - Read",
+      "item": [
+        {
+          "name": "List all posts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const listSchema = {\"type\":\"array\",\"minItems\":100,\"maxItems\":100,\"items\":{\"type\":\"object\",\"required\":[\"userId\",\"id\",\"title\",\"body\"],\"properties\":{\"userId\":{\"type\":\"integer\"},\"id\":{\"type\":\"integer\"},\"title\":{\"type\":\"string\"},\"body\":{\"type\":\"string\"}}}};",
+                  "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Returns 100 posts that match the post schema\", () => pm.response.to.have.jsonSchema(listSchema));",
+                  "pm.test(\"Post ids are unique\", () => {",
+                  "  const ids = pm.response.json().map((p) => p.id);",
+                  "  pm.expect(new Set(ids).size).to.equal(ids.length);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/posts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "posts"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "Get a single post",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const postSchema = {\"type\":\"object\",\"required\":[\"userId\",\"id\",\"title\",\"body\"],\"properties\":{\"userId\":{\"type\":\"integer\"},\"id\":{\"type\":\"integer\"},\"title\":{\"type\":\"string\"},\"body\":{\"type\":\"string\"}}};",
+                  "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Body matches the post schema\", () => pm.response.to.have.jsonSchema(postSchema));",
+                  "pm.test(\"Returned id equals the requested id\", () => {",
+                  "  pm.expect(pm.response.json().id).to.equal(Number(pm.environment.get(\"postId\")));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/posts/{{postId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "posts",
+                "{{postId}}"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "Filter posts by userId",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Every post belongs to user 1\", () => {",
+                  "  const posts = pm.response.json();",
+                  "  pm.expect(posts).to.have.lengthOf(10);",
+                  "  posts.forEach((p) => pm.expect(p.userId).to.equal(1));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/posts?userId=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "posts"
+              ],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List comments of a post",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Comments belong to the post and have valid emails\", () => {",
+                  "  const comments = pm.response.json();",
+                  "  pm.expect(comments).to.be.an(\"array\").that.is.not.empty;",
+                  "  const postId = Number(pm.environment.get(\"postId\"));",
+                  "  comments.forEach((c) => {",
+                  "    pm.expect(c.postId).to.equal(postId);",
+                  "    pm.expect(c.email).to.match(/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/);",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/posts/{{postId}}/comments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "posts",
+                "{{postId}}",
+                "comments"
+              ],
+              "query": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get a single user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"User has the expected structure\", () => {",
+                  "  const u = pm.response.json();",
+                  "  pm.expect(u).to.have.all.keys(\"id\", \"name\", \"username\", \"email\", \"address\", \"phone\", \"website\", \"company\");",
+                  "  pm.expect(u.email).to.match(/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/);",
+                  "  pm.expect(u.address.geo).to.have.all.keys(\"lat\", \"lng\");",
+                  "  pm.expect(u.company.name).to.be.a(\"string\").and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "1"
+              ],
+              "query": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Posts - Write",
+      "item": [
+        {
+          "name": "Create a post",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Response echoes the submitted data and returns an id\", () => {",
+                  "  const r = pm.response.json();",
+                  "  pm.expect(r.title).to.equal(\"QA automation demo\");",
+                  "  pm.expect(r.body).to.equal(\"Created by the Newman test suite\");",
+                  "  pm.expect(r.userId).to.equal(1);",
+                  "  pm.expect(r.id).to.be.a(\"number\").and.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/posts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "posts"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"QA automation demo\",\n  \"body\": \"Created by the Newman test suite\",\n  \"userId\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Replace a post (PUT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Post is replaced with the submitted data\", () => {",
+                  "  const r = pm.response.json();",
+                  "  pm.expect(r.title).to.equal(\"Replaced title\");",
+                  "  pm.expect(r.body).to.equal(\"Replaced body\");",
+                  "  pm.expect(r.id).to.equal(Number(pm.environment.get(\"postId\")));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/posts/{{postId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "posts",
+                "{{postId}}"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 1,\n  \"title\": \"Replaced title\",\n  \"body\": \"Replaced body\",\n  \"userId\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update a post (PATCH)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Only the title changes; other fields are kept\", () => {",
+                  "  const r = pm.response.json();",
+                  "  pm.expect(r.title).to.equal(\"Patched title\");",
+                  "  pm.expect(r.body).to.be.a(\"string\").and.not.empty;",
+                  "  pm.expect(r.userId).to.be.a(\"number\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/posts/{{postId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "posts",
+                "{{postId}}"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Patched title\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete a post",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response body is an empty object\", () => {",
+                  "  pm.expect(Object.keys(pm.response.json())).to.have.lengthOf(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/posts/{{postId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "posts",
+                "{{postId}}"
+              ],
+              "query": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Negative cases",
+      "item": [
+        {
+          "name": "Post that does not exist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Body is an empty object\", () => {",
+                  "  pm.expect(Object.keys(pm.response.json())).to.have.lengthOf(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/posts/99999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "posts",
+                "99999"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "Invalid post id format",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/posts/abc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "posts",
+                "abc"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "Unknown route",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/unknown-route",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "unknown-route"
+              ],
+              "query": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Data-driven POST",
+      "item": [
+        {
+          "name": "Create post from data file",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Values come from data/posts.csv when run with -d; defaults keep the request valid otherwise.",
+                  "pm.variables.set(\"dd_title\", pm.iterationData.get(\"title\") || \"Default title\");",
+                  "pm.variables.set(\"dd_body\", pm.iterationData.get(\"body\") || \"Default body\");",
+                  "pm.variables.set(\"dd_userId\", pm.iterationData.get(\"userId\") || 1);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Response echoes the row from the data file\", () => {",
+                  "  const r = pm.response.json();",
+                  "  pm.expect(r.title).to.equal(pm.variables.get(\"dd_title\"));",
+                  "  pm.expect(r.body).to.equal(pm.variables.get(\"dd_body\"));",
+                  "  pm.expect(String(r.userId)).to.equal(String(pm.variables.get(\"dd_userId\")));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/posts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "posts"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"{{dd_title}}\",\n  \"body\": \"{{dd_body}}\",\n  \"userId\": {{dd_userId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

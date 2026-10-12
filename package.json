@@ -1,0 +1,18 @@
+{
+  "name": "api-tests-newman-demo",
+  "version": "1.1.0",
+  "description": "Sample API test suite: Postman collection run with Newman, against a bundled local mock or the public JSONPlaceholder practice API.",
+  "private": true,
+  "scripts": {
+    "mock": "node mock/server.js",
+    "test": "node scripts/run.js",
+    "test:data": "node scripts/run.js --data",
+    "test:all": "npm test && npm run test:data",
+    "test:live": "node scripts/run.js --live",
+    "test:live:data": "node scripts/run.js --live --data"
+  },
+  "devDependencies": {
+    "newman": "^6.2.1",
+    "newman-reporter-htmlextra": "^1.23.1"
+  }
+}
